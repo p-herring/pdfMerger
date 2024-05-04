@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Merger</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <h1>PDF Merger</h1>
+    <div id="uploadArea">
+        <p>Drag and drop PDF files here, or</p>
+        <input type="file" id="fileInput" name="files" multiple>
+        <label for="fileInput">Choose File</label>
+    </div>
+    <div id="result"></div>
+    <script>
+        var uploadArea = document.getElementById('uploadArea');
+        var resultDiv = document.getElementById('result');
+
+        // Prevent default behavior for drag events
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        // Highlight drop area when dragging files
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, highlight, false);
+        });
+
+        // Unhighlight drop area when not dragging files
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        // Handle dropped files
+        uploadArea.addEventListener('drop', handleDrop, false);
+
+        // Prevent default behavior for drag events
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Highlight drop area when dragging files
+        function highlight() {
+            uploadArea.classList.add('highlight');
+        }
+
+        // Unhighlight drop area when not dragging files
+        function unhighlight() {
+            uploadArea.classList.remove('highlight');
+        }
+
+        // Handle dropped files
+        function handleDrop(e) {
+            var dt = e.dataTransfer;
+            var files = dt.files;
+            handleFiles(files);
+        }
+
+        // Handle selected files
+        document.getElementById('fileInput').addEventListener('change', function() {
+            var files = this.files;
+            handleFiles(files);
+        });
+
+        // Handle uploaded files
+        function handleFiles(files) {
+            resultDiv.innerHTML = ''; // Clear previous result
+            var formData = new FormData();
+            for (var i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+            uploadArea.classList.add('uploading');
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/merge');
+            xhr.responseType = 'blob'; // Set the response type to 'blob' for binary data
+            xhr.onload = function() {
+                uploadArea.classList.remove('uploading');
+                if (xhr.status === 200) {
+                    var blob = xhr.response; // Get the response as a Blob
+                    var url = URL.createObjectURL(blob); // Create a URL for the Blob
+                    var link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'merged.pdf'; // Set the download attribute to force download
+                    link.textContent = 'Download Merged PDF';
+                    resultDiv.appendChild(link);
+                    resultDiv.insertAdjacentHTML('beforeend', '<p>Upload complete.</p>'); // Display upload complete message
+                } else {
+                    console.error(xhr.statusText);
+                }
+            };
+            xhr.send(formData);
+        }
+    </script>
+</body>
+</html>
